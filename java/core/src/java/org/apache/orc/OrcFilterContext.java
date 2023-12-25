@@ -18,11 +18,11 @@
 
 package org.apache.orc;
 
-import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
-import org.apache.hadoop.hive.ql.exec.vector.ListColumnVector;
-import org.apache.hadoop.hive.ql.exec.vector.MapColumnVector;
-import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
+import org.apache.commons.lang3.Range;
+import org.apache.hadoop.hive.ql.exec.vector.*;
 import org.apache.hadoop.hive.ql.io.filter.MutableFilterContext;
+
+import java.util.Arrays;
 
 /**
  * This defines the input for any filter operation. This is an extension of
@@ -87,5 +87,29 @@ public interface OrcFilterContext extends MutableFilterContext {
       }
     }
     return false;
+  }
+
+  static Range<Integer> valueIndexes(ColumnVector[] vectorBranch, int rowIdx) {
+    MultiValuedColumnVector[] mvl = Arrays.stream(vectorBranch)
+        .filter(v -> v instanceof MultiValuedColumnVector)
+        .toArray(MultiValuedColumnVector[]::new);
+    int offset = rowIdx;
+    long length = 1;
+    for (MultiValuedColumnVector v : mvl) {
+      long childrenOffset = 0;
+      long childrenCount = 0;
+      for (int i = offset; i < offset + length; i++)
+        if(v.noNulls || !v.isNull[i]) {
+          if(childrenOffset == 0)
+            childrenOffset = v.offsets[i];
+          childrenCount += v.lengths[i];
+        }
+      if (childrenCount == 0)
+        return null;
+
+      offset = (int) childrenOffset;
+      length = childrenCount;
+    }
+    return Range.between(offset, offset + (int) length - 1);
   }
 }

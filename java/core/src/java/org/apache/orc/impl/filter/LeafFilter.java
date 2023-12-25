@@ -18,6 +18,7 @@
 
 package org.apache.orc.impl.filter;
 
+import org.apache.commons.lang3.Range;
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
 import org.apache.orc.OrcFilterContext;
 
@@ -57,8 +58,13 @@ public abstract class LeafFilter implements VectorFilter {
         rowIdx = bound.sel[i];
 
         // Check the value
-        if (allowWithNegation(v, rowIdx)) {
-          selOut.sel[currSize++] = rowIdx;
+        Range<Integer> range = OrcFilterContext.valueIndexes(branch, rowIdx);
+        assert range != null; // noNulls checked above
+        for (int valueIdx = range.getMinimum(); valueIdx <= range.getMaximum(); valueIdx++) {
+          if (allowWithNegation(v, valueIdx)) {
+            selOut.sel[currSize++] = rowIdx;
+            break;
+          }
         }
       }
     } else {
@@ -66,10 +72,14 @@ public abstract class LeafFilter implements VectorFilter {
         rowIdx = bound.sel[i];
 
         // Check the value only if not null
-        if (!OrcFilterContext.isNull(branch, rowIdx) &&
-            allowWithNegation(v, rowIdx)) {
-          selOut.sel[currSize++] = rowIdx;
-        }
+        Range<Integer> range = OrcFilterContext.valueIndexes(branch, rowIdx);
+        if(range != null)
+          for (int valueIdx = range.getMinimum(); valueIdx <= range.getMaximum(); valueIdx++) {
+            if ((v.noNulls || v.isNull[valueIdx]) && allowWithNegation(v, valueIdx)) {
+              selOut.sel[currSize++] = rowIdx;
+              break;
+            }
+          }
       }
     }
 
