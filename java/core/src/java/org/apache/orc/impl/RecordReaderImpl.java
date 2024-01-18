@@ -28,25 +28,7 @@ import org.apache.hadoop.hive.ql.io.sarg.SearchArgument.TruthValue;
 import org.apache.hadoop.hive.ql.util.TimestampUtils;
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.orc.BooleanColumnStatistics;
-import org.apache.orc.CollectionColumnStatistics;
-import org.apache.orc.ColumnStatistics;
-import org.apache.orc.CompressionCodec;
-import org.apache.orc.DataReader;
-import org.apache.orc.DateColumnStatistics;
-import org.apache.orc.DecimalColumnStatistics;
-import org.apache.orc.DoubleColumnStatistics;
-import org.apache.orc.IntegerColumnStatistics;
-import org.apache.orc.OrcConf;
-import org.apache.orc.OrcFile;
-import org.apache.orc.OrcFilterContext;
-import org.apache.orc.OrcProto;
-import org.apache.orc.Reader;
-import org.apache.orc.RecordReader;
-import org.apache.orc.StringColumnStatistics;
-import org.apache.orc.StripeInformation;
-import org.apache.orc.TimestampColumnStatistics;
-import org.apache.orc.TypeDescription;
+import org.apache.orc.*;
 import org.apache.orc.filter.BatchFilter;
 import org.apache.orc.impl.filter.FilterFactory;
 import org.apache.orc.impl.reader.ReaderEncryption;
@@ -67,13 +49,7 @@ import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.time.chrono.ChronoLocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TimeZone;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class RecordReaderImpl implements RecordReader {
@@ -96,7 +72,7 @@ public class RecordReaderImpl implements RecordReader {
   private final long rowIndexStride;
   private long rowInStripe = 0;
   // position of the follow reader within the stripe
-  private long followRowInStripe = 0;
+//  private long followRowInStripe = 0;
   private int currentStripe = -1;
   private long rowBaseInStripe = 0;
   private long rowCountInStripe = 0;
@@ -1320,7 +1296,6 @@ public class RecordReaderImpl implements RecordReader {
     // setup the position in the stripe
     rowCountInStripe = stripe.getNumberOfRows();
     rowInStripe = 0;
-    followRowInStripe = 0;
     rowBaseInStripe = 0;
     for (int i = 0; i < currentStripe; ++i) {
       rowBaseInStripe += stripes.get(i).getNumberOfRows();
@@ -1402,7 +1377,8 @@ public class RecordReaderImpl implements RecordReader {
     }
     return true;
   }
-
+  static int spass = 0;
+  int dpass = 0;
   @Override
   public boolean nextBatch(VectorizedRowBatch batch) throws IOException {
     try {
@@ -1418,19 +1394,17 @@ public class RecordReaderImpl implements RecordReader {
           }
           // Read stripe in Memory
           readStripe();
-          followRowInStripe = rowInStripe;
         }
 
-        batchSize = computeBatchSize(batch.getMaxSize());
+        batchSize = computeBatchSize(batch.getMaxSize()); LOG.trace("@{} nextBatch{}[{} in @]: rowInStripe[{}] currentStripe[{}] computedBatchSize[{}] startReadPhase[{}]", System.identityHashCode(this), spass++, dpass++, rowInStripe, currentStripe, batchSize, startReadPhase);
         reader.setVectorColumnCount(batch.getDataColumnCount());
-        reader.nextBatch(batch, batchSize, startReadPhase);
+        reader.nextBatch(batch, batchSize, startReadPhase);LOG.trace("@{} nextBatch: startReadPhase[{}] phase returned batch.size[{}]", System.identityHashCode(this), startReadPhase, batch.size);
         if (startReadPhase == TypeReader.ReadPhase.LEADERS && batch.size > 0) {
           // At least 1 row has been selected and as a result we read the follow columns into the
           // row batch
           reader.nextBatch(batch,
                            batchSize,
-                           prepareFollowReaders(rowInStripe, followRowInStripe));
-          followRowInStripe = rowInStripe + batchSize;
+                           prepareFollowReaders(rowInStripe));
         }
         rowInStripe += batchSize;
         advanceToNextRow(reader, rowInStripe + rowBaseInStripe, true);
@@ -1464,61 +1438,27 @@ public class RecordReaderImpl implements RecordReader {
    * @param toFollowRow The rowIdx identifies the required row position within the stripe for
    *                    follow read
    * @param fromFollowRow Indicates the current position of the follow read, exclusive
-   * @return the read phase for reading non-filter columns, this shall be FOLLOWERS_AND_PARENTS in
-   * case of a seek otherwise will be FOLLOWERS
+   * @return the read phase for reading non-filter columns
    */
-  private TypeReader.ReadPhase prepareFollowReaders(long toFollowRow, long fromFollowRow)
+  private TypeReader.ReadPhase prepareFollowReaders(long toFollowRow)
     throws IOException {
-    // 1. Determine the required row group and skip rows needed from the RG start
-    int needRG = computeRGIdx(toFollowRow);
-    // The current row is not yet read so we -1 to compute the previously read row group
-    int readRG = computeRGIdx(fromFollowRow - 1);
-    long skipRows;
-    if (needRG == readRG && toFollowRow >= fromFollowRow) {
-      // In case we are skipping forward within the same row group, we compute skip rows from the
-      // current position
-      skipRows = toFollowRow - fromFollowRow;
-    } else {
-      // In all other cases including seeking backwards, we compute the skip rows from the start of
-      // the required row group
-      skipRows = toFollowRow - (needRG * rowIndexStride);
-    }
+    final TypeReader.ReadPhase result = TypeReader.ReadPhase.ALL_PAF;
+
+    // 1. Determine the required row group
+    int rgIdx = computeRGIdx(toFollowRow);
 
     // 2. Plan the row group idx for the non-filter columns if this has not already taken place
     if (needsFollowColumnsRead) {
       needsFollowColumnsRead = false;
-      planner.readFollowData(indexes, includedRowGroups, needRG, false);
-      reader.startStripe(planner, TypeReader.ReadPhase.FOLLOWERS);
+      planner.readFollowData(indexes, includedRowGroups, rgIdx, false);
+      reader.startStripe(planner, result);
     }
 
-    // 3. Position the non-filter readers to the required RG and skipRows
-    TypeReader.ReadPhase result = TypeReader.ReadPhase.FOLLOWERS;
-    if (needRG != readRG || toFollowRow < fromFollowRow) {
-      // When having to change a row group or in case of back navigation, seek both the filter
-      // parents and non-filter. This will re-position the parents present vector. This is needed
-      // to determine the number of non-null values to skip on the non-filter columns.
-      seekToRowEntry(reader, needRG, TypeReader.ReadPhase.FOLLOWERS_AND_PARENTS);
-      // skip rows on both the filter parents and non-filter as both have been positioned in the
-      // previous step
-      reader.skipRows(skipRows, TypeReader.ReadPhase.FOLLOWERS_AND_PARENTS);
-      result = TypeReader.ReadPhase.FOLLOWERS_AND_PARENTS;
-    } else if (skipRows > 0) {
-      // in case we are only skipping within the row group, position the filter parents back to the
-      // position of the follow. This is required to determine the non-null values to skip on the
-      // non-filter columns.
-      seekToRowEntry(reader, readRG, TypeReader.ReadPhase.LEADER_PARENTS);
-      reader.skipRows(fromFollowRow - (readRG * rowIndexStride),
-          TypeReader.ReadPhase.LEADER_PARENTS);
-      // Move both the filter parents and non-filter forward, this will compute the correct
-      // non-null skips on follow children
-      reader.skipRows(skipRows, TypeReader.ReadPhase.FOLLOWERS_AND_PARENTS);
-      result = TypeReader.ReadPhase.FOLLOWERS_AND_PARENTS;
-    }
-    // Identifies the read level that should be performed for the read
-    // FOLLOWERS_WITH_PARENTS indicates repositioning identifying both non-filter and filter parents
-    // FOLLOWERS indicates read only of the non-filter level without the parents, which is used during
-    // contiguous read. During a contiguous read no skips are needed and the non-null information of
-    // the parent is available in the column vector for use during non-filter read
+    // 3. Position the non-filter readers to the required RG
+    seekToRowEntry(reader, rgIdx, result);
+    // skip rows from the start of the required row group
+    reader.skipRows(toFollowRow - (rgIdx * rowIndexStride), result);
+
     return result;
   }
 

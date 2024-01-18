@@ -70,6 +70,7 @@ public interface TypeReader {
   enum ReadPhase {
     // Used to read all columns in the absence of filters
     ALL(EnumSet.allOf(ReaderCategory.class)),
+    ALL_PAF(EnumSet.allOf(ReaderCategory.class)),
     // Used to perform read of the filter columns in the presence of filters
     LEADERS(EnumSet.of(ReaderCategory.FILTER_PARENT, ReaderCategory.FILTER_CHILD)),
     // Used to perform the read of non-filter columns after a match on the filter columns when a

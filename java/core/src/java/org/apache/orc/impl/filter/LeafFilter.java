@@ -21,8 +21,12 @@ package org.apache.orc.impl.filter;
 import org.apache.commons.lang3.Range;
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
 import org.apache.orc.OrcFilterContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class LeafFilter implements VectorFilter {
+  public static final Logger LOG = LoggerFactory.getLogger(LeafFilter.class);
+
   public String getColName() {
     return colName;
   }
@@ -75,8 +79,9 @@ public abstract class LeafFilter implements VectorFilter {
         Range<Integer> range = OrcFilterContext.valueIndexes(branch, rowIdx);
         if(range != null)
           for (int valueIdx = range.getMinimum(); valueIdx <= range.getMaximum(); valueIdx++) {
-            if ((v.noNulls || v.isNull[valueIdx]) && allowWithNegation(v, valueIdx)) {
+            if ((v.noNulls || !v.isNull[valueIdx]) && allowWithNegation(v, valueIdx)) {
               selOut.sel[currSize++] = rowIdx;
+              LOG.trace("@{} filter: valueIdx[{}] rowIdx[{}] currSize[{}]", System.identityHashCode(this), valueIdx, rowIdx, currSize);
               break;
             }
           }
