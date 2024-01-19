@@ -90,6 +90,7 @@ public interface OrcFilterContext extends MutableFilterContext {
   }
 
   static Range<Integer> valueIndexes(ColumnVector[] vectorBranch, int rowIdx) {
+    //TODO: PAF: check path for nulls!!!
     MultiValuedColumnVector[] mvl = Arrays.stream(vectorBranch)
         .filter(v -> v instanceof MultiValuedColumnVector)
         .toArray(MultiValuedColumnVector[]::new);
@@ -99,7 +100,7 @@ public interface OrcFilterContext extends MutableFilterContext {
       long childrenOffset = 0;
       long childrenCount = 0;
       for (int i = offset; i < offset + length; i++)
-        if(v.noNulls || !v.isNull[i]) {
+        if(v.noNulls || !v.isNull[v.isRepeating ? 0 : i]) {
           if(childrenOffset == 0)
             childrenOffset = v.offsets[i];
           childrenCount += v.lengths[i];
