@@ -1442,7 +1442,7 @@ public class RecordReaderImpl implements RecordReader {
    */
   private TypeReader.ReadPhase prepareFollowReaders(long toFollowRow)
     throws IOException {
-    final TypeReader.ReadPhase result = TypeReader.ReadPhase.ALL_PAF;
+    final TypeReader.ReadPhase result = TypeReader.ReadPhase.ALL_PAF; // TODO: revert this simplification after proper fixing (previous code had two branches or reading with different phases, which does not seem right at all
 
     // 1. Determine the required row group
     int rgIdx = computeRGIdx(toFollowRow);
