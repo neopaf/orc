@@ -45,7 +45,6 @@ public abstract class LeafFilter implements VectorFilter {
                      Selected selOut) {
     ColumnVector[] branch = fc.findColumnVector(colName);
     ColumnVector v = branch[branch.length - 1];
-    boolean noNulls = OrcFilterContext.noNulls(branch);
     int currSize = 0;
     int rowIdx;
 
@@ -57,29 +56,14 @@ public abstract class LeafFilter implements VectorFilter {
           selOut.sel[currSize++] = rowIdx;
         }
       }
-    } else if (noNulls) {
-      for (int i = 0; i < bound.selSize; i++) {
-        rowIdx = bound.sel[i];
-
-        // Check the value
-        Range<Integer> range = OrcFilterContext.valueIndexes(branch, rowIdx);
-        assert range != null; // noNulls checked above
-        for (int valueIdx = range.getMinimum(); valueIdx <= range.getMaximum(); valueIdx++) {
-          if (allowWithNegation(v, valueIdx)) {
-            selOut.sel[currSize++] = rowIdx;
-            break;
-          }
-        }
-      }
     } else {
       for (int i = 0; i < bound.selSize; i++) {
         rowIdx = bound.sel[i];
 
-        // Check the value only if not null
         Range<Integer> range = OrcFilterContext.valueIndexes(branch, rowIdx);
         if(range != null)
           for (int valueIdx = range.getMinimum(); valueIdx <= range.getMaximum(); valueIdx++) {
-            if ((v.noNulls || !v.isNull[valueIdx]) && allowWithNegation(v, valueIdx)) {
+            if (allowWithNegation(v, valueIdx)) {
               selOut.sel[currSize++] = rowIdx;
               LOG.trace("@{} filter: valueIdx[{}] rowIdx[{}] currSize[{}]", System.identityHashCode(this), valueIdx, rowIdx, currSize);
               break;

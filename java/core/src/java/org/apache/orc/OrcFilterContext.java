@@ -22,8 +22,6 @@ import org.apache.commons.lang3.Range;
 import org.apache.hadoop.hive.ql.exec.vector.*;
 import org.apache.hadoop.hive.ql.io.filter.MutableFilterContext;
 
-import java.util.Arrays;
-
 /**
  * This defines the input for any filter operation. This is an extension of
  * [[{@link VectorizedRowBatch}]] with schema.
@@ -90,26 +88,34 @@ public interface OrcFilterContext extends MutableFilterContext {
   }
 
   static Range<Integer> valueIndexes(ColumnVector[] vectorBranch, int rowIdx) {
-    MultiValuedColumnVector[] mvl = Arrays.stream(vectorBranch)
-        .filter(v -> v instanceof MultiValuedColumnVector)
-        .toArray(MultiValuedColumnVector[]::new);
     int offset = rowIdx;
     long length = 1;
-    for (MultiValuedColumnVector v : mvl) {
+    for (ColumnVector v : vectorBranch) {
       long childrenOffset = 0;
       long childrenCount = 0;
-      for (int i = offset; i < offset + length; i++)
-        if(v.noNulls || !v.isNull[i]) {
-          if(childrenOffset == 0)
-            childrenOffset = v.offsets[i];
-          childrenCount += v.lengths[i];
-        }
+      if (v instanceof MultiValuedColumnVector) {
+        MultiValuedColumnVector mv = (MultiValuedColumnVector) v;
+        for (int i = offset; i < offset + length; i++)
+          if (mv.noNulls || !mv.isNull[v.isRepeating ? 0 : i]) {
+            if (childrenOffset == 0)
+              childrenOffset = mv.offsets[i];
+            childrenCount += mv.lengths[i];
+          }
+      } else {
+        for (int i = offset; i < offset + length; i++)
+          if (v.noNulls || !v.isNull[v.isRepeating ? 0 : i]) {
+            if (childrenOffset == 0)
+              childrenOffset = i;
+            childrenCount += 1;
+          }
+      }
       if (childrenCount == 0)
         return null;
 
       offset = (int) childrenOffset;
       length = childrenCount;
     }
+
     return Range.between(offset, offset + (int) length - 1);
   }
 }
