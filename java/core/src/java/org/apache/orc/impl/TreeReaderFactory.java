@@ -2155,7 +2155,7 @@ public class TreeReaderFactory {
       // Read present/isNull stream
       super.nextVector(result, isNull, batchSize, filterContext, readPhase);
 
-      scratchlcv.ensureSize(batchSize, false);if(columnId==384) LOG.trace("@{} nextVector: stream[{}]", System.identityHashCode(this), stream);
+      scratchlcv.ensureSize(batchSize, false); //if(columnId==384) LOG.trace("@{} nextVector: stream[{}]", System.identityHashCode(this), stream);
       BytesColumnVectorUtil.readOrcByteArrays(stream, lengths, scratchlcv,
           result, batchSize);
     }

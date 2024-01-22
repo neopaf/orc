@@ -65,7 +65,7 @@ public abstract class LeafFilter implements VectorFilter {
           for (int valueIdx = range.getMinimum(); valueIdx <= range.getMaximum(); valueIdx++) {
             if (allowWithNegation(v, valueIdx)) {
               selOut.sel[currSize++] = rowIdx;
-              LOG.trace("@{} filter: valueIdx[{}] rowIdx[{}] currSize[{}]", System.identityHashCode(this), valueIdx, rowIdx, currSize);
+//              LOG.trace("@{} filter: valueIdx[{}] rowIdx[{}] currSize[{}]", System.identityHashCode(this), valueIdx, rowIdx, currSize);
               break;
             }
           }

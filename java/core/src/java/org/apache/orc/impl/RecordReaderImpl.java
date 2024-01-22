@@ -1396,9 +1396,9 @@ public class RecordReaderImpl implements RecordReader {
           readStripe();
         }
 
-        batchSize = computeBatchSize(batch.getMaxSize()); LOG.trace("@{} nextBatch{}[{} in @]: rowInStripe[{}] currentStripe[{}] computedBatchSize[{}] startReadPhase[{}]", System.identityHashCode(this), spass++, dpass++, rowInStripe, currentStripe, batchSize, startReadPhase);
+        batchSize = computeBatchSize(batch.getMaxSize()); //LOG.trace("@{} nextBatch{}[{} in @]: rowInStripe[{}] currentStripe[{}] computedBatchSize[{}] startReadPhase[{}]", System.identityHashCode(this), spass++, dpass++, rowInStripe, currentStripe, batchSize, startReadPhase);
         reader.setVectorColumnCount(batch.getDataColumnCount());
-        reader.nextBatch(batch, batchSize, startReadPhase);LOG.trace("@{} nextBatch: startReadPhase[{}] phase returned batch.size[{}]", System.identityHashCode(this), startReadPhase, batch.size);
+        reader.nextBatch(batch, batchSize, startReadPhase); //LOG.trace("@{} nextBatch: startReadPhase[{}] phase returned batch.size[{}]", System.identityHashCode(this), startReadPhase, batch.size);
         if (startReadPhase == TypeReader.ReadPhase.LEADERS && batch.size > 0) {
           // At least 1 row has been selected and as a result we read the follow columns into the
           // row batch

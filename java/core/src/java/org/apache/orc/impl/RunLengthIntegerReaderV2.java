@@ -52,7 +52,7 @@ public class RunLengthIntegerReaderV2 implements IntegerReader {
 
   private static final RunLengthIntegerWriterV2.EncodingType[] encodings =
     RunLengthIntegerWriterV2.EncodingType.values();
-  private void readValues(boolean ignoreEof) throws IOException {if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} readValues: {}", System.identityHashCode(this), input);}
+  private void readValues(boolean ignoreEof) throws IOException { //if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} readValues: {}", System.identityHashCode(this), input);}
     // read the first 2 bits and determine the encoding type
     int firstByte = input.read();
     if (firstByte < 0) {
@@ -321,21 +321,21 @@ public class RunLengthIntegerReaderV2 implements IntegerReader {
   }
 
   @Override
-  public long next() throws IOException {//if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} next: used[{}] numLiterals[{}] input[{}]", System.identityHashCode(this), used, numLiterals, input);}
+  public long next() throws IOException { //if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} next: used[{}] numLiterals[{}] input[{}]", System.identityHashCode(this), used, numLiterals, input);}
     long result;
     if (used == numLiterals) {
       numLiterals = 0;
       used = 0;
       readValues(false);
     }
-    result = literals[used++];//if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} next={} input[{}]", System.identityHashCode(this), result, input);}
+    result = literals[used++]; //if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} next={} input[{}]", System.identityHashCode(this), result, input);}
     return result;
   }
 
   @Override
   public void seek(PositionProvider index) throws IOException {
     input.seek(index);
-    int consumed = (int) index.getNext();if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} seek: consumed[{}] input[{}]", System.identityHashCode(this), consumed, input);}
+    int consumed = (int) index.getNext(); //if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} seek: consumed[{}] input[{}]", System.identityHashCode(this), consumed, input);}
     if (consumed != 0) {
       // a loop is required for cases where we break the run into two
       // parts
@@ -352,7 +352,7 @@ public class RunLengthIntegerReaderV2 implements IntegerReader {
   }
 
   @Override
-  public void skip(long numValues) throws IOException {if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} skip({}) {}", System.identityHashCode(this), numValues, input);}
+  public void skip(long numValues) throws IOException { //if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} skip({}) {}", System.identityHashCode(this), numValues, input);}
     while (numValues > 0) {
       if (used == numLiterals) {
         numLiterals = 0;
@@ -368,7 +368,7 @@ public class RunLengthIntegerReaderV2 implements IntegerReader {
   @Override
   public void nextVector(ColumnVector previous,
                          long[] data,
-                         int previousLen) throws IOException {if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} nextVectorL({}) {}", System.identityHashCode(this), previousLen, input);}
+                         int previousLen) throws IOException { //if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} nextVectorL({}) {}", System.identityHashCode(this), previousLen, input);}
     // if all nulls, just return
     if (previous.isRepeating && !previous.noNulls && previous.isNull[0]) {
       return;
@@ -394,7 +394,7 @@ public class RunLengthIntegerReaderV2 implements IntegerReader {
   }
 
   @Override
-  public void nextVector(ColumnVector vector, int[] data, int size) throws IOException {if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} nextVectorI({}) {}", System.identityHashCode(this), size, input);}
+  public void nextVector(ColumnVector vector, int[] data, int size) throws IOException { //if("column 33 kind LENGTH".equals(input.name.toString())) {LOG.trace("@{} nextVectorI({}) {}", System.identityHashCode(this), size, input);}
     final int batchSize = Math.min(data.length, size);
     if (vector.noNulls) {
       for (int r = 0; r < batchSize; ++r) {
