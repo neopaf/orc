@@ -95,19 +95,23 @@ public interface OrcFilterContext extends MutableFilterContext {
       long childrenCount = 0;
       if (v instanceof MultiValuedColumnVector) {
         MultiValuedColumnVector mv = (MultiValuedColumnVector) v;
-        for (int i = offset; i < offset + length; i++)
-          if (mv.noNulls || !mv.isNull[v.isRepeating ? 0 : i]) {
+        for (int i = offset; i < offset + length; i++) {
+          int j = v.isRepeating ? 0 : i;
+          if (mv.noNulls || !mv.isNull[j]) {
             if (childrenOffset == 0)
-              childrenOffset = mv.offsets[i];
-            childrenCount += mv.lengths[i];
+              childrenOffset = mv.offsets[j];
+            childrenCount += mv.lengths[j];
           }
+        }
       } else {
-        for (int i = offset; i < offset + length; i++)
-          if (v.noNulls || !v.isNull[v.isRepeating ? 0 : i]) {
+        for (int i = offset; i < offset + length; i++) {
+          int j = v.isRepeating ? 0 : i;
+          if (v.noNulls || !v.isNull[j]) {
             if (childrenOffset == 0)
-              childrenOffset = i;
+              childrenOffset = j;
             childrenCount += 1;
           }
+        }
       }
       if (childrenCount == 0)
         return null;

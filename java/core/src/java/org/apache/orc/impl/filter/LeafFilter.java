@@ -48,15 +48,15 @@ public abstract class LeafFilter implements VectorFilter {
     int currSize = 0;
     int rowIdx;
 
-    if (v.isRepeating) {
-      if (!OrcFilterContext.isNull(branch, 0) && allowWithNegation(v, 0)) {
-        // If the repeating value is allowed then allow the current selSize
-        for (int i = 0; i < bound.selSize; i++) {
-          rowIdx = bound.sel[i];
-          selOut.sel[currSize++] = rowIdx;
-        }
-      }
-    } else {
+//    if (v.isRepeating) {
+//      if (!OrcFilterContext.isNull(branch, 0) && allowWithNegation(v, 0)) {
+//        // If the repeating value is allowed then allow the current selSize
+//        for (int i = 0; i < bound.selSize; i++) {
+//          rowIdx = bound.sel[i];
+//          selOut.sel[currSize++] = rowIdx;
+//        }
+//      }
+//    } else {
       for (int i = 0; i < bound.selSize; i++) {
         rowIdx = bound.sel[i];
 
@@ -70,7 +70,7 @@ public abstract class LeafFilter implements VectorFilter {
             }
           }
       }
-    }
+//    }
 
     selOut.selSize = currSize;
   }
