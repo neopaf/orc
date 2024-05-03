@@ -91,14 +91,14 @@ public interface OrcFilterContext extends MutableFilterContext {
     int offset = rowIdx;
     long length = 1;
     for (ColumnVector v : vectorBranch) {
-      long childrenOffset = 0;
+      long childrenOffset = -1;
       long childrenCount = 0;
       if (v instanceof MultiValuedColumnVector) {
         MultiValuedColumnVector mv = (MultiValuedColumnVector) v;
         for (int i = offset; i < offset + length; i++) {
           int j = v.isRepeating ? 0 : i;
-          if (mv.noNulls || !mv.isNull[j]) {
-            if (childrenOffset == 0)
+          if (v.noNulls || !v.isNull[j]) {
+            if (childrenOffset < 0)
               childrenOffset = mv.offsets[j];
             childrenCount += mv.lengths[j];
           }
@@ -107,14 +107,15 @@ public interface OrcFilterContext extends MutableFilterContext {
         for (int i = offset; i < offset + length; i++) {
           int j = v.isRepeating ? 0 : i;
           if (v.noNulls || !v.isNull[j]) {
-            if (childrenOffset == 0)
+            if (childrenOffset < 0)
               childrenOffset = j;
-            childrenCount += 1;
+            childrenCount++;
           }
         }
       }
       if (childrenCount == 0)
         return null;
+      assert childrenOffset >= 0;
 
       offset = (int) childrenOffset;
       length = childrenCount;
